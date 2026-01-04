@@ -8,6 +8,50 @@ import os
 import data_manager as dm
 import ai_analyzer as ai
 
+import streamlit as st
+import streamlit as st
+
+# --- パスワード認証機能 ---
+def check_password():
+    def password_entered():
+        if st.session_state["password_input"] == st.secrets["APP_PASSWORD"]:
+            st.session_state["password_correct"] = True
+            del st.session_state["password_input"]  # パスワードを消去
+        else:
+            st.session_state["password_correct"] = False
+
+    if "password_correct" not in st.session_state:
+        st.text_input("パスワードを入力してください", type="password", on_change=password_entered, key="password_input")
+        return False
+    elif not st.session_state["password_correct"]:
+        st.text_input("パスワードを入力してください", type="password", on_change=password_entered, key="password_input")
+        st.error("😕 パスワードが違います")
+        return False
+    else:
+        return True
+
+# パスワードが正しくない場合は、ここで処理を止める
+if not check_password():
+    st.stop()
+
+# --- ここから下に、今までのコード（titleやfetch_all_dataなど）を続ける ---
+# パスワード設定（好きな文字に変えてください）
+PASSWORD = st.secrets["APP_PASSWORD"]
+
+def check_password():
+    if "password_correct" not in st.session_state:
+        st.text_input("パスワードを入力してください", type="password", on_change=password_entered, key="password_input")
+        return False
+    return st.session_state["password_correct"]
+
+def password_entered():
+    if st.session_state["password_input"] == PASSWORD:
+        st.session_state["password_correct"] = True
+    else:
+        st.error("パスワードが違います")
+
+if not check_password():
+    st.stop()  # パスワードが違う場合はここで処理を止める
 # ---------------------------------------------------------
 # APIキーを設定
 api_key = st.secrets["GEMINI_API_KEY"]
