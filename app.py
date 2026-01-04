@@ -188,37 +188,43 @@ with entry_tab2:
             st.cache_data.clear()
             st.rerun()
 
-# --- 4. 管理セクション（履歴編集） ---
+# --- 4. 管理セクション（履歴編集・資産設定） ---
 with st.expander("⚙️ 履歴の編集・資産予算設定"):
+    
+    # --- 資産の編集（エラーの元を修正） ---
     st.markdown("#### 🏦 資産の編集")
-    # 資産データを編集可能なテーブルで表示
-    edited_assets = st.data_editor(asset_df, num_rows="dynamic", use_container_width=True, key="editor_assets")
+    # 数値として正しく読み込ませる（エラー対策）
+    asset_df["金額"] = pd.to_numeric(asset_df["金額"], errors='coerce').fillna(0)
+    
+    # もし別の場所で editor_assets を使っていたら "editor_assets_v2" などに変える
+    edited_assets = st.data_editor(
+        asset_df, 
+        num_rows="dynamic", 
+        use_container_width=True, 
+        key="editor_assets_new"  # ← 名前を新しいものに変えました
+    )
+    
     if st.button("資産状況を保存"):
         dm.save_csv(edited_assets, dm.ASSET_FILE)
         st.success("資産の内訳を更新しました")
         st.cache_data.clear()
         st.rerun()
-    
+
     st.markdown("---")
 
-    st.markdown("#### 🏦 資産の編集")
-    # 数値として正しく読み込ませるための処理
-    asset_df["金額"] = pd.to_numeric(asset_df["金額"], errors='coerce').fillna(0)
-    edited_assets = st.data_editor(asset_df, num_rows="dynamic", use_container_width=True, key="editor_assets")
-    
-    if st.button("資産状況を保存"):
-        dm.save_csv(edited_assets, dm.ASSET_FILE)
-        st.success("資産の内訳を更新しました")
-        st.cache_data.clear()
-        st.rerun()
-    st.markdown("---")
+    # --- 履歴の編集 ---
     st.markdown("#### 📋 履歴の編集")
     if not df_all.empty:
-        edited_kakeibo = st.data_editor(df_all.sort_values("date", ascending=False), num_rows="dynamic", use_container_width=True, key="editor_history")
+        edited_kakeibo = st.data_editor(
+            df_all.sort_values("date", ascending=False), 
+            num_rows="dynamic", 
+            use_container_width=True, 
+            key="editor_history"
+        )
         if st.button("履歴を保存"):
             dm.save_csv(edited_kakeibo, dm.KAKEIBO_FILE)
-            st.cache_data.clear()
             st.success("保存しました")
+            st.cache_data.clear()
             st.rerun()
 
 
