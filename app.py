@@ -141,8 +141,13 @@ with entry_tab1:
             with st.spinner("Analyzing..."):
                 try:
                     data = ai.analyze_receipt(api_key, uploaded_file.getvalue(), CATEGORIES)
+                    # 1. 家計簿履歴に保存
                     dm.save_csv(pd.DataFrame([data]), dm.KAKEIBO_FILE, mode='a', header=not os.path.exists(dm.KAKEIBO_FILE))
-                    st.toast("記録完了", icon="✅")
+                    
+                    # 2. 【追加】現金を金額分だけ減らす
+                    dm.update_asset("現金", -int(data["price"])) 
+                    
+                    st.toast("記録完了＆現金を更新しました", icon="✅")
                     st.cache_data.clear()
                     st.rerun()
                 except Exception as e:
@@ -156,8 +161,14 @@ with entry_tab2:
         m_cat = st.selectbox("カテゴリー", CATEGORIES)
         m_store = st.text_input("支払先")
         if st.form_submit_button("記録する"):
+            # 1. データを準備して保存
             data = {"date": m_date.strftime("%Y/%m/%d"), "store": m_store if m_store else "手入力", "item": "手入力", "price": m_price, "category": m_cat}
             dm.save_csv(pd.DataFrame([data]), dm.KAKEIBO_FILE, mode='a', header=not os.path.exists(dm.KAKEIBO_FILE))
+            
+            # 2. 【追加】現金を金額分だけ減らす
+            dm.update_asset("現金", -int(m_price))
+            
+            st.toast("記録しました", icon="✅")
             st.cache_data.clear()
             st.rerun()
 
@@ -170,4 +181,5 @@ with st.expander("⚙️ 履歴の編集・資産予算設定"):
             dm.save_csv(edited_kakeibo, dm.KAKEIBO_FILE)
             st.cache_data.clear()
             st.success("保存しました")
+
             st.rerun()
