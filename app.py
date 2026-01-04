@@ -8,54 +8,41 @@ import os
 import data_manager as dm
 import ai_analyzer as ai
 
-import streamlit as st
-import streamlit as st
-
 # --- パスワード認証機能 ---
 def check_password():
+    """パスワードが正しいかチェックし、結果をTrue/Falseで返す"""
     def password_entered():
+        # Secretsに登録したAPP_PASSWORDと比較
         if st.session_state["password_input"] == st.secrets["APP_PASSWORD"]:
             st.session_state["password_correct"] = True
-            del st.session_state["password_input"]  # パスワードを消去
+            del st.session_state["password_input"]  # セキュリティのため入力値を消去
         else:
             st.session_state["password_correct"] = False
 
-    if "password_correct" not in st.session_state:
-        st.text_input("パスワードを入力してください", type="password", on_change=password_entered, key="password_input")
-        return False
-    elif not st.session_state["password_correct"]:
-        st.text_input("パスワードを入力してください", type="password", on_change=password_entered, key="password_input")
-        st.error("😕 パスワードが違います")
-        return False
-    else:
+    # すでに認証済みの場合はTrueを返す
+    if st.session_state.get("password_correct", False):
         return True
 
-# パスワードが正しくない場合は、ここで処理を止める
+    # ログイン画面を表示
+    st.title("🔒 認証が必要です")
+    st.text_input("パスワードを入力してください", type="password", on_change=password_entered, key="password_input")
+    
+    if "password_correct" in st.session_state and not st.session_state["password_correct"]:
+        st.error("😕 パスワードが違います")
+    
+    return False
+
+# 💡 パスワードが通るまで、ここから下のコードは一切実行されません
 if not check_password():
     st.stop()
 
-# --- ここから下に、今までのコード（titleやfetch_all_dataなど）を続ける ---
-# パスワード設定（好きな文字に変えてください）
-PASSWORD = st.secrets["APP_PASSWORD"]
-
-def check_password():
-    if "password_correct" not in st.session_state:
-        st.text_input("パスワードを入力してください", type="password", on_change=password_entered, key="password_input")
-        return False
-    return st.session_state["password_correct"]
-
-def password_entered():
-    if st.session_state["password_input"] == PASSWORD:
-        st.session_state["password_correct"] = True
-    else:
-        st.error("パスワードが違います")
-
-if not check_password():
-    st.stop()  # パスワードが違う場合はここで処理を止める
 # ---------------------------------------------------------
-# APIキーを設定
+# 認証成功後にのみ実行される設定
+# ---------------------------------------------------------
 api_key = st.secrets["GEMINI_API_KEY"]
 # ---------------------------------------------------------
+
+# --- これ以降にfetch_all_data()やメインのUIコードを続けてください ---
 
 CATEGORIES = ["食費", "外食", "日用品", "交通費", "電気", "ガス", "水道", "インターネット", "スマホ", "家賃", "衣服", "美容", "医療費", "交際費", "趣味", "教育費", "車関連", "税金", "その他"]
 
