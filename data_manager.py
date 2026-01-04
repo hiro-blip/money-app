@@ -25,4 +25,16 @@ def load_kakeibo():
     if os.path.exists(KAKEIBO_FILE):
         # 毎回最新のファイルを読み込む
         return pd.read_csv(KAKEIBO_FILE, encoding='utf-8-sig')
+
     return pd.DataFrame(columns=["date", "store", "item", "price", "category"])
+
+def update_asset(item_name, amount):
+    """特定の資産項目の金額を更新する（引き算・足し算）"""
+    df = load_data(ASSET_FILE, pd.DataFrame([{"項目": "現金", "金額": 0}]))
+    if item_name in df["項目"].values:
+        df.loc[df["項目"] == item_name, "金額"] += amount
+    else:
+        # 項目がない場合は新しく作る
+        new_row = pd.DataFrame([{"項目": item_name, "金額": amount}])
+        df = pd.concat([df, new_row], ignore_index=True)
+    save_csv(df, ASSET_FILE)
