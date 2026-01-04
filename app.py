@@ -140,12 +140,11 @@ with entry_tab1:
         if st.button("AI分析を実行", type="primary"):
             with st.spinner("Analyzing..."):
                 try:
-                    # AI解析を実行し、結果をセッションに一時保存
                     st.session_state["ai_result"] = ai.analyze_receipt(api_key, uploaded_file.getvalue(), CATEGORIES)
                 except Exception as e:
-                    st.error(f"エラー: {e}")
+                    st.error(f"分析エラー: {e}")
 
-        # AIの解析結果がある場合、修正フォームを表示
+        # 解析結果がある場合にフォームを表示
         if "ai_result" in st.session_state:
             st.markdown("---")
             st.markdown("##### 📝 解析結果の確認・修正")
@@ -155,13 +154,19 @@ with entry_tab1:
                 f_price = st.number_input("金額", value=int(st.session_state["ai_result"]["price"]))
                 f_cat = st.selectbox("カテゴリー", CATEGORIES, index=CATEGORIES.index(st.session_state["ai_result"]["category"]) if st.session_state["ai_result"]["category"] in CATEGORIES else 0)
                 
+                # 【新機能】支払い元を資産リストから選択
+                asset_names = asset_df["項目"].unique().tolist()
+                f_payment = st.selectbox("支払い元", asset_names)
+                
                 if st.form_submit_button("この内容で確定保存"):
                     final_data = {"date": f_date, "store": f_store, "item": "AIスキャン", "price": f_price, "category": f_cat}
+                    # 家計簿に保存
                     dm.save_csv(pd.DataFrame([final_data]), dm.KAKEIBO_FILE, mode='a', header=not os.path.exists(dm.KAKEIBO_FILE))
-                    dm.update_asset("現金", -int(f_price)) # ここで現金を減らす
+                    # 指定した資産から引き算
+                    dm.update_asset(f_payment, -int(f_price)) 
                     
-                    del st.session_state["ai_result"] # 確認済みのデータを消去
-                    st.success("修正して保存しました！")
+                    del st.session_state["ai_result"]
+                    st.success(f"記録完了！ {f_payment} の残高を更新しました。")
                     st.cache_data.clear()
                     st.rerun()
 with entry_tab2:
@@ -203,3 +208,4 @@ with st.expander("⚙️ 履歴の編集・資産予算設定"):
             st.cache_data.clear()
             st.success("保存しました")
             st.rerun()
+
