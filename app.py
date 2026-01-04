@@ -140,19 +140,30 @@ with entry_tab1:
         if st.button("AI分析を実行", type="primary"):
             with st.spinner("Analyzing..."):
                 try:
-                    data = ai.analyze_receipt(api_key, uploaded_file.getvalue(), CATEGORIES)
-                    # 1. 家計簿履歴に保存
-                    dm.save_csv(pd.DataFrame([data]), dm.KAKEIBO_FILE, mode='a', header=not os.path.exists(dm.KAKEIBO_FILE))
-                    
-                    # 2. 【追加】現金を金額分だけ減らす
-                    dm.update_asset("現金", -int(data["price"])) 
-                    
-                    st.toast("記録完了＆現金を更新しました", icon="✅")
-                    st.cache_data.clear()
-                    st.rerun()
+                    # AI解析を実行し、結果をセッションに一時保存
+                    st.session_state["ai_result"] = ai.analyze_receipt(api_key, uploaded_file.getvalue(), CATEGORIES)
                 except Exception as e:
                     st.error(f"エラー: {e}")
 
+        # AIの解析結果がある場合、修正フォームを表示
+        if "ai_result" in st.session_state:
+            st.markdown("---")
+            st.markdown("##### 📝 解析結果の確認・修正")
+            with st.form("ai_fix_form"):
+                f_date = st.text_input("日付", st.session_state["ai_result"]["date"])
+                f_store = st.text_input("店名", st.session_state["ai_result"]["store"])
+                f_price = st.number_input("金額", value=int(st.session_state["ai_result"]["price"]))
+                f_cat = st.selectbox("カテゴリー", CATEGORIES, index=CATEGORIES.index(st.session_state["ai_result"]["category"]) if st.session_state["ai_result"]["category"] in CATEGORIES else 0)
+                
+                if st.form_submit_button("この内容で確定保存"):
+                    final_data = {"date": f_date, "store": f_store, "item": "AIスキャン", "price": f_price, "category": f_cat}
+                    dm.save_csv(pd.DataFrame([final_data]), dm.KAKEIBO_FILE, mode='a', header=not os.path.exists(dm.KAKEIBO_FILE))
+                    dm.update_asset("現金", -int(f_price)) # ここで現金を減らす
+                    
+                    del st.session_state["ai_result"] # 確認済みのデータを消去
+                    st.success("修正して保存しました！")
+                    st.cache_data.clear()
+                    st.rerun()
 with entry_tab2:
     with st.form("manual_entry", clear_on_submit=True):
         c1, c2 = st.columns(2)
@@ -174,6 +185,16 @@ with entry_tab2:
 
 # --- 4. 管理セクション（履歴編集） ---
 with st.expander("⚙️ 履歴の編集・資産予算設定"):
+    st.markdown("#### 🏦 資産の編集")
+    # 資産データを編集可能なテーブルで表示
+    edited_assets = st.data_editor(asset_df, num_rows="dynamic", use_container_width=True, key="editor_assets")
+    if st.button("資産状況を保存"):
+        dm.save_csv(edited_assets, dm.ASSET_FILE)
+        st.success("資産の内訳を更新しました")
+        st.cache_data.clear()
+        st.rerun()
+    
+    st.markdown("---")
     st.markdown("#### 📋 履歴の編集")
     if not df_all.empty:
         edited_kakeibo = st.data_editor(df_all.sort_values("date", ascending=False), num_rows="dynamic", use_container_width=True, key="editor_history")
@@ -181,5 +202,4 @@ with st.expander("⚙️ 履歴の編集・資産予算設定"):
             dm.save_csv(edited_kakeibo, dm.KAKEIBO_FILE)
             st.cache_data.clear()
             st.success("保存しました")
-
             st.rerun()
